@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35303.130
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SubAirControl", "SubAirControl\SubAirControl.csproj", "{601C254A-EA21-4DB5-8E75-ACCA412A69DC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{601C254A-EA21-4DB5-8E75-ACCA412A69DC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{601C254A-EA21-4DB5-8E75-ACCA412A69DC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{601C254A-EA21-4DB5-8E75-ACCA412A69DC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{601C254A-EA21-4DB5-8E75-ACCA412A69DC}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C9BE4E25-224E-44CB-9957-974CFF19A875}
+	EndGlobalSection
+EndGlobal
