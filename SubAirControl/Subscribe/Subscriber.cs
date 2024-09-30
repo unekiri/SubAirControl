@@ -11,7 +11,7 @@ namespace SubAirControl.Subscribe
     public class Subscriber
     {
         public IMqttClient Client { get; private set; }
-        private TaskCompletionSource<bool> _messageReceivedCompletionSource;
+        public  TaskCompletionSource<bool> MessageReceivedCompletionSource { get; private set; }
 
         public Subscriber()
         {
@@ -29,20 +29,39 @@ namespace SubAirControl.Subscribe
                 Console.WriteLine();
 
                 // メッセージを受信したので TaskCompletionSource を完了させる
-                _messageReceivedCompletionSource?.TrySetResult(true);
+                MessageReceivedCompletionSource?.TrySetResult(true);
                 return Task.CompletedTask;
             };
         }
 
-        public async Task Connect(string brokerAddress, int port)
+        public async Task ConnectToBroker(string brokerAddress, int port)
         {
             var options = new MqttClientOptionsBuilder()
                 .WithClientId(Guid.NewGuid().ToString())
                 .WithTcpServer(brokerAddress, port)
                 .Build();
+            var retry = 0;
 
-            await this.Client.ConnectAsync(options, CancellationToken.None);
-            Console.WriteLine("Connected to MQTT broker.");
+            while (!this.Client.IsConnected && retry < 5)
+            {
+                try
+                {
+                    Console.WriteLine($"Attempting to connect to broker... (Attempt {retry + 1})");
+                    await this.Client.ConnectAsync(options, CancellationToken.None);
+                    Console.WriteLine("Connected to MQTT broker.");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Connection failed: {ex.Message}. Retrying in 1 second...");
+                    await Task.Delay(TimeSpan.FromSeconds(1));
+                }
+                retry++;
+            }
+
+            if (!this.Client.IsConnected)
+            {
+                Console.WriteLine("Failed to connect to the MQTT broker after 5 attempts.");
+            }
         }
 
         public async Task SubscribeAndWaitForMessage(string topic)
@@ -57,10 +76,10 @@ namespace SubAirControl.Subscribe
                 Console.WriteLine($"### SUBSCRIBED TO TOPIC: {topic} ###");
 
                 // メッセージ受信を待つ準備をする
-                _messageReceivedCompletionSource = new TaskCompletionSource<bool>();
+                MessageReceivedCompletionSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
                 // メッセージが来るまで待機
-                await _messageReceivedCompletionSource.Task;
+                await MessageReceivedCompletionSource.Task;
                 Console.WriteLine("Message received, continuing execution...");
             }
             catch (Exception e)
@@ -88,7 +107,7 @@ namespace SubAirControl.Subscribe
             var subscriber = new Subscriber();
 
             // MQTTブローカーに接続
-            await subscriber.Connect(address, port);
+            await subscriber.ConnectToBroker(address, port);
 
             // トピックの購読を行い、メッセージが受信されるまで待機
             await subscriber.SubscribeAndWaitForMessage(topic);
