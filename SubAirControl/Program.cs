@@ -9,25 +9,31 @@ namespace SubAirControl
     {
         static async Task Main(string[] args)
         {
-            var builder = Host.CreateDefaultBuilder(args);
+            var cts = new CancellationTokenSource();
 
-            var config = new ConfigurationBuilder()
-                .SetBasePath(AppContext.BaseDirectory)
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                .Build();
-
-            // IServiceCollectonに設定を登録する
-            builder.ConfigureServices((ContextBoundObject, services) =>
+            // ctrl + cが押された時に、CancellationTokenを機能させる
+            Console.CancelKeyPress += (sender, eventArgs) =>
             {
-                // IconfigurationをDIコンテナに追加
+                eventArgs.Cancel = true;
+                cts.Cancel();
+            };
+
+            var builder = Host.CreateDefaultBuilder(args).ConfigureServices((context, services) =>
+            {
+                var config = new ConfigurationBuilder()
+                    .SetBasePath(AppContext.BaseDirectory)
+                    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                    .Build();
+
                 services.AddSingleton<IConfiguration>(config);
+                services.AddSingleton<Subscriber>();
                 services.AddSingleton<ExeSubscriber>();
             });
 
             var host = builder.Build();
-            var exeSubscriber = host.Services.GetRequiredService<ExeSubscriber>();
 
-            await exeSubscriber.Run();
+            var exeSubscriber = host.Services.GetRequiredService<ExeSubscriber>();
+            await exeSubscriber.Run(cts.Token);
         }
     }
 }
