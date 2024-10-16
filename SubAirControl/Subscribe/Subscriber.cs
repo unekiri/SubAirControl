@@ -11,7 +11,7 @@ namespace SubAirControl.Subscribe
     public class Subscriber
     {
         public readonly IMqttClient _client;
-        public  TaskCompletionSource<bool> MessageReceivedCompletionSource { get; private set; }
+        public TaskCompletionSource<bool> MessageReceivedCompletionSource { get; private set; }
 
         public Subscriber()
         {
@@ -34,7 +34,7 @@ namespace SubAirControl.Subscribe
             };
         }
 
-        public async Task ConnectToBroker(string brokerAddress, int port)
+        public async Task ConnectToBroker(string brokerAddress, int port, CancellationToken cts)
         {
             var options = new MqttClientOptionsBuilder()
                 .WithClientId(Guid.NewGuid().ToString())
@@ -47,13 +47,17 @@ namespace SubAirControl.Subscribe
                 try
                 {
                     Console.WriteLine($"Attempting to connect to broker... (Attempt {retry + 1})");
-                    await this._client.ConnectAsync(options, CancellationToken.None);
+                    await this._client.ConnectAsync(options, cts);
                     Console.WriteLine("Connected to MQTT broker.");
+                }
+                catch (OperationCanceledException)
+                {
+                    Console.WriteLine("Operation was cancelled.");
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Connection failed: {ex.Message}. Retrying in 1 second...");
-                    await Task.Delay(TimeSpan.FromSeconds(1));
+                    await Task.Delay(TimeSpan.FromSeconds(1), cts);
                 }
                 retry++;
             }
@@ -64,20 +68,27 @@ namespace SubAirControl.Subscribe
             }
         }
 
-        public async Task SubscribeAndWaitForMessage(string topic)
+        public async Task SubscribeAndWaitForMessage(string topic, CancellationToken cts)
         {
             try
             {
                 // トピックにサブスクライブ
                 await this._client.SubscribeAsync(new MqttTopicFilterBuilder()
                     .WithTopic(topic)
-                    .Build());
+                    .Build(), cts);
 
-                // メッセージ受信を待つ準備をする
-                MessageReceivedCompletionSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                while (!cts.IsCancellationRequested)
+                {
+                    // メッセージ受信を待つ準備をする
+                    MessageReceivedCompletionSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-                // メッセージが来るまで待機
-                await MessageReceivedCompletionSource.Task;
+                    // メッセージが来るまで待機
+                    await MessageReceivedCompletionSource.Task;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                Console.WriteLine("Operation was cancelled.");
             }
             catch (Exception e)
             {
@@ -97,17 +108,17 @@ namespace SubAirControl.Subscribe
             this._subscriber = subscriber;
         }
 
-        public async Task Run()
+        public async Task Run(CancellationToken cts)
         {
             var address = this._configuration["MqttSettings:Address"];
             var port = int.Parse(this._configuration["MqttSettings:Port"]);
             var topic = this._configuration["MqttSettings:Topic"];
 
             // MQTTブローカーに接続
-            await _subscriber.ConnectToBroker(address, port);
+            await _subscriber.ConnectToBroker(address, port, cts);
 
             // トピックの購読を行い、メッセージが受信されるまで待機
-            await _subscriber.SubscribeAndWaitForMessage(topic);
+            await _subscriber.SubscribeAndWaitForMessage(topic, cts);
         }
     }
 

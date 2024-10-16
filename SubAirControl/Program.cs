@@ -9,6 +9,15 @@ namespace SubAirControl
     {
         static async Task Main(string[] args)
         {
+            var cts = new CancellationTokenSource();
+
+            // ctrl + cが押された時に、CancellationTokenを機能させる
+            Console.CancelKeyPress += (sender, eventArgs) =>
+            {
+                eventArgs.Cancel = true;
+                cts.Cancel();
+            };
+
             var builder = Host.CreateDefaultBuilder(args).ConfigureServices((context, services) =>
             {
                 var config = new ConfigurationBuilder()
@@ -24,7 +33,7 @@ namespace SubAirControl
             var host = builder.Build();
 
             var exeSubscriber = host.Services.GetRequiredService<ExeSubscriber>();
-            await exeSubscriber.Run();
+            await exeSubscriber.Run(cts.Token);
         }
     }
 }
