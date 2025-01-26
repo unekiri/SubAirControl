@@ -26,14 +26,13 @@ namespace SubAirControl
                     .Build();
 
                 services.AddSingleton<IConfiguration>(config);
-                services.AddSingleton<Subscriber>();
-                services.AddSingleton<ExeSubscriber>();
+                services.AddSingleton<AtFirstExeSubscribe>();
             });
 
             var host = builder.Build();
 
-            var exeSubscriber = host.Services.GetRequiredService<ExeSubscriber>();
-            await exeSubscriber.Run(cts.Token);
+            var atFirstExeSubscribe = host.Services.GetRequiredService<AtFirstExeSubscribe>();
+            await atFirstExeSubscribe.Run(cts.Token);
         }
     }
 }
