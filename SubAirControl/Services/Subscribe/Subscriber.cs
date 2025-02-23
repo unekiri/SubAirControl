@@ -1,23 +1,26 @@
 ﻿using Microsoft.Extensions.Configuration;
 using MQTTnet;
 using MQTTnet.Client;
+using SubAirControl.Helpers;
 using System;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace SubAirControl.Subscribe
+namespace SubAirControl.Services.Subscribe
 {
     // メッセージ購読クラス
     public class Subscriber
     {
         public readonly IMqttClient _client;
+        private readonly IConnectionHelper _connectionHelper;
         public TaskCompletionSource<bool> MessageReceivedCompletionSource { get; private set; }
 
-        public Subscriber()
+        public Subscriber(IConnectionHelper connectionHelper)
         {
             var factory = new MqttFactory();
-            this._client = factory.CreateMqttClient();
+            _client = factory.CreateMqttClient();
+            _connectionHelper = connectionHelper;
         }
 
         public async Task ConnectToBroker(string brokerAddress, int port, CancellationToken cts)
@@ -29,7 +32,7 @@ namespace SubAirControl.Subscribe
             var retry = 0;
 
             // メッセージ受信ハンドラ
-            this._client.ApplicationMessageReceivedAsync += e =>
+            _client.ApplicationMessageReceivedAsync += e =>
             {
                 Console.WriteLine("### RECEIVED APPLICATION MESSAGE ###");
                 Console.WriteLine($"+ Topic = {e.ApplicationMessage.Topic}");
@@ -43,30 +46,7 @@ namespace SubAirControl.Subscribe
                 return Task.CompletedTask;
             };
 
-            while (!this._client.IsConnected && retry < 5)
-            {
-                try
-                {
-                    Console.WriteLine($"Attempting to connect to broker... (Attempt {retry + 1})");
-                    await this._client.ConnectAsync(options, cts);
-                    Console.WriteLine("Connected to MQTT broker.");
-                }
-                catch (OperationCanceledException)
-                {
-                    Console.WriteLine("Operation was cancelled.");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Connection failed: {ex.Message}. Retrying in 1 second...");
-                    await Task.Delay(TimeSpan.FromSeconds(1), cts);
-                }
-                retry++;
-            }
-
-            if (!this._client.IsConnected)
-            {
-                Console.WriteLine("Failed to connect to the MQTT broker after 5 attempts.");
-            }
+            await _connectionHelper.ConnectWithRetryAsync(_client, options);
         }
 
         // MQTTブローカーのトピックから購読する
@@ -75,7 +55,7 @@ namespace SubAirControl.Subscribe
             try
             {
                 // トピックにサブスクライブ
-                await this._client.SubscribeAsync(new MqttTopicFilterBuilder()
+                await _client.SubscribeAsync(new MqttTopicFilterBuilder()
                     .WithTopic(topic)
                     .Build(), cts);
 

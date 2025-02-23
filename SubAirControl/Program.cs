@@ -1,11 +1,12 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using SubAirControl.Subscribe;
+using SubAirControl.Helpers;
+using SubAirControl.Services.Subscribe;
 
 namespace SubAirControl
 {
-    class Program
+    class Programs
     {
         static async Task Main(string[] args)
         {
@@ -26,6 +27,7 @@ namespace SubAirControl
                     .Build();
 
                 services.AddSingleton<IConfiguration>(config);
+                services.AddSingleton<IConnectionHelper, MqttConnectionHelper>();
                 services.AddSingleton<AtFirstExeSubscribe>();
             });
 
